@@ -1,48 +1,104 @@
 package edu.ucb.pablostify
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import edu.ucb.pablostify.login.data.LoginRepositoryImpl
+import edu.ucb.pablostify.login.domain.usecase.LoginUseCase
+import edu.ucb.pablostify.login.presentation.LoginScreen
+import edu.ucb.pablostify.login.presentation.state.LoginViewModel
+import edu.ucb.pablostify.moviedetail.data.MovieDetailRepositoryImpl
+import edu.ucb.pablostify.moviedetail.domain.usecase.GetMovieDetailUseCase
+import edu.ucb.pablostify.moviedetail.domain.usecase.SubmitReviewUseCase
+import edu.ucb.pablostify.moviedetail.presentation.MovieDetailScreen
+import edu.ucb.pablostify.moviedetail.presentation.state.MovieDetailViewModel
+import edu.ucb.pablostify.movielist.data.MovieRepositoryImpl
+import edu.ucb.pablostify.movielist.domain.usecase.GetMovieListUseCase
+import edu.ucb.pablostify.movielist.presentation.MovieListScreen
+import edu.ucb.pablostify.movielist.presentation.state.MovieListViewModel
+import edu.ucb.pablostify.navigation.Route
+import edu.ucb.pablostify.profile.data.ProfileRepositoryImpl
+import edu.ucb.pablostify.profile.domain.usecase.GetProfileUseCase
+import edu.ucb.pablostify.profile.domain.usecase.LogoutUseCase
+import edu.ucb.pablostify.profile.presentation.ProfileScreen
+import edu.ucb.pablostify.profile.presentation.state.ProfileViewModel
+import edu.ucb.pablostify.register.data.RegisterRepositoryImpl
+import edu.ucb.pablostify.register.domain.usecase.RegisterUseCase
+import edu.ucb.pablostify.register.presentation.RegisterScreen
+import edu.ucb.pablostify.register.presentation.state.RegisterViewModel
 
-import pablostify.shared.generated.resources.Res
-import pablostify.shared.generated.resources.compose_multiplatform
-
+// NOTA: aquí se instancia todo "a mano" (sin DI) para que el proyecto compile y navegue
+// de una vez. Cuando agregues Koin (u otro), reemplaza estos remember { ... } por
+// koinInject<...>() y borra las líneas que arman los repository/usecase manualmente.
 @Composable
-@Preview
 fun App() {
+    var currentRoute by remember { mutableStateOf<Route>(Route.Login) }
+
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
-            }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+        when (val route = currentRoute) {
+            Route.Login -> {
+                val viewModel = remember {
+                    LoginViewModel(LoginUseCase(LoginRepositoryImpl()))
                 }
+                LoginScreen(
+                    viewModel = viewModel,
+                    onNavigateToHome = { currentRoute = Route.MovieList },
+                    onNavigateToRegister = { currentRoute = Route.Register },
+                    onNavigateToForgotPassword = { /* TODO: pantalla de recuperar contraseña */ }
+                )
+            }
+
+            Route.Register -> {
+                val viewModel = remember {
+                    RegisterViewModel(RegisterUseCase(RegisterRepositoryImpl()))
+                }
+                RegisterScreen(
+                    viewModel = viewModel,
+                    onNavigateToHome = { currentRoute = Route.MovieList },
+                    onNavigateToLogin = { currentRoute = Route.Login }
+                )
+            }
+
+            Route.MovieList -> {
+                val viewModel = remember {
+                    MovieListViewModel(GetMovieListUseCase(MovieRepositoryImpl()))
+                }
+                MovieListScreen(
+                    viewModel = viewModel,
+                    onNavigateToDetail = { movieId -> currentRoute = Route.MovieDetail(movieId) },
+                    onNavigateToAddMovie = { /* TODO: pantalla de agregar película */ }
+                )
+            }
+
+            is Route.MovieDetail -> {
+                val viewModel = remember {
+                    val repository = MovieDetailRepositoryImpl()
+                    MovieDetailViewModel(
+                        GetMovieDetailUseCase(repository),
+                        SubmitReviewUseCase(repository)
+                    )
+                }
+                MovieDetailScreen(
+                    movieId = route.movieId,
+                    viewModel = viewModel,
+                    onNavigateBack = { currentRoute = Route.MovieList }
+                )
+            }
+
+            Route.Profile -> {
+                val viewModel = remember {
+                    val repository = ProfileRepositoryImpl()
+                    ProfileViewModel(GetProfileUseCase(repository), LogoutUseCase(repository))
+                }
+                ProfileScreen(
+                    viewModel = viewModel,
+                    onNavigateToLogin = { currentRoute = Route.Login },
+                    onNavigateToAccountSettings = { /* TODO */ },
+                    onNavigateToSecurity = { /* TODO */ }
+                )
             }
         }
     }
