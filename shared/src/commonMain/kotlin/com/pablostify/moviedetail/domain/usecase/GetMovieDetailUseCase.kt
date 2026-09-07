@@ -1,0 +1,12 @@
+package com.pablostify.moviedetail.domain.usecase
+
+import com.pablostify.moviedetail.domain.model.MovieDetail
+import com.pablostify.moviedetail.domain.repository.MovieDetailRepository
+
+class GetMovieDetailUseCase(
+    private val repository: MovieDetailRepository
+) {
+    suspend operator fun invoke(movieId: String): Result<MovieDetail> {
+        return repository.getMovieDetail(movieId)
+    }
+}
