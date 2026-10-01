@@ -1,6 +1,9 @@
 rootProject.name = "Pablostify"
 
 pluginManagement {
+    plugins {
+        id("dev.detekt") version "2.0.0-alpha.6"
+    }
     repositories {
         google {
             mavenContent {
